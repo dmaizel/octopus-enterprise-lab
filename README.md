@@ -68,6 +68,7 @@ You also need:
 - **Docker Desktop** running
 - An **Octopus Cloud** trial (Enterprise features included): https://octopus.com/start
 - A **GitHub** account
+- A **Docker Hub** account (free tier is fine): https://hub.docker.com/signup — needed for Chapter 5
 
 ### Fork and Clone the Deploy Repo
 
@@ -300,25 +301,61 @@ After deploying, check the project overview page for the tenant dashboard — th
 
 **Friday morning.** FinPay's CI pipeline (GitHub Actions) builds and pushes a new `payments-api` container image after every merge to main. Marcus doesn't want to manually create a release every time — it should happen automatically.
 
+You'll simulate the CI pipeline by tagging and pushing images to your own Docker Hub repo, then configure Octopus to detect new tags and auto-deploy.
+
+### Simulate the CI Pipeline
+
+FinPay's CI pushes images to `<org>/finpay-payments-api` on Docker Hub. You'll simulate this with your own Docker Hub account.
+
+Log in and push an initial "build" — just nginx re-tagged under your namespace:
+
+```bash
+docker login
+
+export DOCKERHUB_USER=<your-dockerhub-username>
+docker tag nginx:1.25-alpine $DOCKERHUB_USER/finpay-payments-api:1.0.0
+docker push $DOCKERHUB_USER/finpay-payments-api:1.0.0
+```
+
+This represents the current production image that CI has already built and pushed.
+
 ### What You'll Do
 
 Switch to the **Payments** space.
 
-**Goal:** Set up an external feed trigger on `payments-api` so that when a new image tag is detected, Octopus automatically creates a release and deploys to Development.
+**Goal:** Configure the `payments-api` project so Octopus detects new image tags pushed to your Docker Hub repo, auto-creates a release, and deploys to Development.
 
 **Key details:**
-- You already set up a Docker Hub feed earlier
-- Navigate to **payments-api → Process** and configure the Helm deploy step to reference a container image from the Docker Hub feed (the `nginx` image, since that's what the charts use)
-- Then set up a **Trigger** (Project → Triggers) that watches for new images and auto-creates a release
-- Since we're using public `nginx`, you can test this by changing the image version pattern or channel rules
+- **Update the Docker Hub feed** with your Docker Hub credentials (Library → External Feeds → edit the feed you created earlier). Without credentials, Octopus can only see public images — it needs to query *your* repository
+- **Add a container image reference** to the Helm deploy step in the payments-api process. This tells Octopus to track `<your-username>/finpay-payments-api` from the Docker Hub feed. The referenced package version becomes available as an Octopus variable
+- **Override the Helm image values** — use the package version variable to set `image.tag`, and set `image.repository` to your Docker Hub image path. The chart already supports both via `image.repository` and `image.tag` in values. You can override with additional `--set` arguments or raw values YAML in the Helm step
+- **Create a trigger** (Project → Triggers) that watches for new container image versions and auto-creates a release
 
-**Also:** Explore **Channels**. Create a second channel called "Hotfix" that uses the Hotfix lifecycle (skips dev, goes straight to staging → prod). Think about how you'd route certain image tags (e.g., `*-hotfix`) to the Hotfix channel.
+### Test It
+
+Push a new "build":
+
+```bash
+docker tag nginx:1.25-alpine $DOCKERHUB_USER/finpay-payments-api:1.1.0
+docker push $DOCKERHUB_USER/finpay-payments-api:1.1.0
+```
+
+Octopus polls the feed periodically (usually every 1-2 minutes). Watch the project dashboard — a new release should appear and auto-deploy to Development.
+
+```bash
+# Verify the new image version is running
+kubectl --context kind-finpay-dev get pods -n payments-dev \
+  -o jsonpath='{.items[*].spec.containers[*].image}' && echo
+```
+
+**Also:** Explore **Channels**. Create a second channel called "Hotfix" that uses the Hotfix lifecycle (skips dev, goes straight to staging → prod). Think about how you'd route certain image tags (e.g., `*-hotfix`) to the Hotfix channel using version rules.
 
 ### 📝 What to Notice
 
-- How does the external feed trigger compare to a CI/CD webhook approach?
+- How long between `docker push` and Octopus creating the release? The feed is polled, not pushed — what are the implications at scale?
+- When the trigger fires, what gets captured in the release? Is it clear which image version the release contains?
 - The channel + lifecycle combination — is it intuitive? How would you explain it to a new team member?
-- When a trigger fires, what gets captured in the release? Is it clear which image version the release contains?
+- Compare this to a webhook-driven approach (CI calls the Octopus API directly after a push). What are the tradeoffs of polling vs. pushing?
 
 ---
 
