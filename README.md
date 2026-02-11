@@ -64,7 +64,7 @@ You also need:
 
 ### Fork and Clone the Deploy Repo
 
-The **[finpay-deploy](https://github.com/TODO_ORG/finpay-deploy)** repo is FinPay's deployment repository. It contains all Helm charts, Kubernetes manifests, and ArgoCD configs that FinPay's teams use. Fork it to your own GitHub account, then clone your fork:
+The **[finpay-deploy](https://github.com/dmaizel/finpay-deploy)** repo is FinPay's deployment repository. It contains all Helm charts, Kubernetes manifests, and ArgoCD configs that FinPay's teams use. Fork it to your own GitHub account, then clone your fork:
 
 ```bash
 git clone git@github.com:<YOUR_USERNAME>/finpay-deploy.git
