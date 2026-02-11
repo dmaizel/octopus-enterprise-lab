@@ -140,7 +140,12 @@ In **each of the 3 spaces** (switch via the top-left dropdown), create:
 
 ### Install K8s Agents
 
-Each space needs its own agent per cluster. For each row in this table, go to the appropriate space, navigate to **Infrastructure → Deployment Targets → Add → Kubernetes Agent**, and run the wizard-generated Helm command against the right cluster.
+Each space needs its own agent per cluster. For each row in this table:
+
+1. Switch to the target **Space** in Octopus (top-left dropdown)
+2. Go to **Infrastructure → Deployment Targets → Add Deployment Target → Kubernetes Agent**
+3. The wizard walks you through naming, environment selection, and generates a Helm command
+4. Switch to the right kubectl context (`kubectl config use-context <context>`) and run the command
 
 | Space | Cluster Context | Agent Name | Target Tag | Environments |
 |-------|----------------|------------|------------|-------------|
@@ -819,27 +824,13 @@ echo "Token: ${ARGO_TOKEN}"
 
 In the **Payments** space: **Infrastructure → Argo CD Instances → Add Argo CD Instance**
 
-The wizard generates a Helm command. Run it against the dev cluster:
+The wizard will walk you through:
+1. Naming the instance (use `finpay-argocd-dev`)
+2. Selecting environments (`Development`, `Staging`)
+3. Providing the ArgoCD server URL (use the in-cluster address: `argocd-server.argocd.svc.cluster.local`)
+4. Providing the ArgoCD API token you generated in Step 2
 
-```bash
-kubectl config use-context kind-finpay-dev
-
-helm upgrade --install --atomic \
-  --create-namespace --namespace octo-argo-gateway \
-  --version "*.*" \
-  --set registration.octopus.name="finpay-argocd-dev" \
-  --set registration.octopus.serverApiUrl="https://<instance>.octopus.app/" \
-  --set registration.octopus.serverAccessToken="<JWT_FROM_WIZARD>" \
-  --set registration.octopus.environments="{development,staging}" \
-  --set registration.octopus.spaceId="<PAYMENTS_SPACE_ID>" \
-  --set gateway.octopus.serverGrpcUrl="grpc://<instance>.octopus.app:8443" \
-  --set gateway.argocd.serverGrpcUrl="grpc://argocd-server.argocd.svc.cluster.local" \
-  --set gateway.argocd.insecure="true" \
-  --set gateway.argocd.plaintext="false" \
-  --set gateway.argocd.authenticationToken="${ARGO_TOKEN}" \
-  finpay-argocd-dev \
-  oci://registry-1.docker.io/octopusdeploy/octopus-argocd-gateway-chart
-```
+It generates a Helm command at the end. Make sure you're on the dev cluster context (`kubectl config use-context kind-finpay-dev`) and run it.
 
 Compare the footprint:
 ```bash
@@ -855,64 +846,28 @@ The Gateway is 1 pod. The K8s Agent is 3+.
 
 #### Step 4: Create ArgoCD Applications
 
-These are standard ArgoCD Applications, with Octopus annotations that map them to projects and environments:
+The finpay-deploy repo includes `argocd-manifests/applications.yaml` — standard ArgoCD Application CRDs with Octopus annotations that map each app to a project and environment.
+
+Before applying, update the repo URL in the file to point to your fork:
 
 ```bash
-# Replace <YOUR_USERNAME> with your GitHub username
-cat > /tmp/argocd-apps.yaml << 'EOF'
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: payments-api-dev
-  namespace: argocd
-  annotations:
-    argo.octopus.com/project: payments-api-argo
-    argo.octopus.com/environment: development
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/<YOUR_USERNAME>/finpay-deploy.git
-    targetRevision: main
-    path: argocd-manifests/payments-api/development
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: payments-dev
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: payments-api-staging
-  namespace: argocd
-  annotations:
-    argo.octopus.com/project: payments-api-argo
-    argo.octopus.com/environment: staging
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/<YOUR_USERNAME>/finpay-deploy.git
-    targetRevision: main
-    path: argocd-manifests/payments-api/staging
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: payments-staging
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-EOF
+cd ~/finpay-deploy
+sed -i '' "s/<YOUR_USERNAME>/$(gh api user --jq .login)/g" argocd-manifests/applications.yaml
+git add -A && git commit -m "Set repo URL in ArgoCD applications" && git push
+```
 
-kubectl --context kind-finpay-dev apply -f /tmp/argocd-apps.yaml
+Then apply them:
+
+```bash
+kubectl --context kind-finpay-dev apply -f argocd-manifests/applications.yaml
 ```
 
 Check ArgoCD picked them up:
 ```bash
 argocd app list
 ```
+
+Take a look at the annotations in `applications.yaml` — `argo.octopus.com/project` and `argo.octopus.com/environment` are the glue between ArgoCD and Octopus. Config lives on the Kubernetes resource, not in the Octopus UI.
 
 #### Step 5: Create the Octopus Project (ArgoCD Mode)
 
