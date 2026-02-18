@@ -173,7 +173,14 @@ Switch to the **Payments** space.
 **Key details:**
 - The chart is at `charts/payments-api/` in your repo
 - Each environment has its own values file (`values-development.yaml`, `values-staging.yaml`, `values-production.yaml`) — figure out how to dynamically pick the right one based on the environment
-- The namespace is different per environment — use a scoped project variable
+- The namespace is different per environment — use a scoped project variable:
+
+| Variable | Value | Scope |
+|----------|-------|-------|
+| `Namespace` | `payments-dev` | Development |
+| `Namespace` | `payments-staging` | Staging |
+| `Namespace` | `payments-prod` | Production |
+
 - Production deploys require an approval gate so the risk team can sign off — how would you enforce this in the deployment process?
 - Use the "Standard" lifecycle
 - Target tag: `payments-k8s`
@@ -243,7 +250,14 @@ Switch to the **Merchants** space.
 
 **Key details:**
 - The YAML uses `#{VariableName}` syntax (Octopus variable substitution) — look at the file to see which variables you need to define
-- You'll need environment-scoped variables for namespace, replicas, log level, and document storage URL
+- Environment-scoped variables:
+
+| Variable | Dev | Staging | Prod |
+|----------|-----|---------|------|
+| `Namespace` | `kyc-dev` | `kyc-staging` | `kyc-prod` |
+| `Replicas` | `1` | `2` | `2` |
+| `LogLevel` | `debug` | `info` | `warn` |
+| `DocumentStorageUrl` | `s3://finpay-dev-kyc-docs` | `s3://finpay-staging-kyc-docs` | `s3://finpay-prod-kyc-docs` |
 - Compliance requires a Manual Intervention step for Staging AND Production (not just prod)
 - Use the "Standard" lifecycle
 - Target tag: `merchants-k8s`
@@ -274,7 +288,25 @@ Still in the **Merchants** space.
 **Key details:**
 - Create two tenants: `Acme Corp` and `EuroShop`
 - Connect both tenants to the project and appropriate environments
-- Define tenant-scoped variables: each tenant gets its own namespace, brand color, and data region per environment
+- Define tenant-scoped variables: each tenant gets its own namespace, brand color, and data region per environment:
+
+  **Acme Corp:**
+  | Variable | Value | Environment |
+  |----------|-------|-------------|
+  | `Namespace` | `merchant-acme-dev` | Development |
+  | `Namespace` | `merchant-acme-staging` | Staging |
+  | `Namespace` | `merchant-acme-prod` | Production |
+  | `BrandColor` | `#FF6600` | *(all)* |
+  | `DataRegion` | `us-east-1` | *(all)* |
+
+  **EuroShop:**
+  | Variable | Value | Environment |
+  |----------|-------|-------------|
+  | `Namespace` | `merchant-euro-dev` | Development |
+  | `Namespace` | `merchant-euro-staging` | Staging |
+  | `Namespace` | `merchant-euro-prod` | Production |
+  | `BrandColor` | `#003399` | *(all)* |
+  | `DataRegion` | `eu-west-1` | *(all)* |
 - The Helm release name must include the tenant name to avoid collisions
 - Deploy both tenants to Development
 
