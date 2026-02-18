@@ -248,7 +248,7 @@ kubectl --context kind-finpay-dev set image deployment/payments-api \
 - How many clicks from "code merged" to "running in staging"?
 - Can you see in the deployment log what Helm commands Octopus actually ran?
 - The release `v1.0.0` is an immutable snapshot that flows through environments — how does that compare to GitOps where each environment independently tracks Git?
-- Live Object Status uses the Argo GitOps Engine under the hood (the same engine ArgoCD uses) — but it's built into the K8s Agent, not a separate tool
+- Live Object Status is powered by the Kubernetes Monitor — a separate component that ships alongside the K8s Agent. The Monitor uses the Argo GitOps Engine library under the hood (the same engine ArgoCD uses for reconciliation)
 
 ---
 
