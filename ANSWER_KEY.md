@@ -241,6 +241,12 @@ Or use raw values YAML in the Helm step's values section.
 
 **Project → Triggers** → create a trigger that watches for new container image versions and auto-creates a release.
 
+### Release Versioning
+
+**Settings → Release Versioning** → select "Use the version number from an included package" → choose the `finpay-payments-api` package reference. Now when the trigger creates a release from image tag `1.2.0`, the release itself is versioned `1.2.0`. This makes the dashboard immediately readable — you can tell which image version is running in each environment at a glance.
+
+The other options: "Generate version numbers using a template" (useful for date-based or custom patterns like `#{Octopus.Date.Year}.#{Octopus.Date.Month}.i`) and the default auto-increment (0.0.1, 0.0.2... — meaningless for container workflows).
+
 ### Channels / Hotfix Path
 
 Create a second channel called "Hotfix" and assign it the Hotfix lifecycle. In the channel's version rules, add a rule that routes image tags matching `*-hotfix` to this channel. All other tags flow through the default channel.

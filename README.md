@@ -428,8 +428,17 @@ kubectl --context kind-finpay-dev get pods -n payments-dev \
 
 **Also:** Explore **Channels**. Octopus can route releases through different lifecycles based on rules. Create a way for hotfix releases to skip dev and go straight to staging → prod. How would you automatically route image tags like `*-hotfix` to a different path?
 
+#### One More Thing
+
+Look at the release that was just auto-created. What's its version number? Now look at the Docker image tag you pushed. Do they match?
+
+Explore **Settings → Release Versioning** for the payments-api project. There are three approaches — what happens to your auto-created releases if you switch from the default to tying the release version to the package you just referenced?
+
+Push another image tag and watch what changes.
+
 ### 📝 What to Notice
 
+- Release `0.0.3` was triggered by image `1.1.0` — would a new team member understand that? What release versioning strategy makes auto-deploy releases self-documenting?
 - How long between `docker push` and Octopus creating the release? The feed is polled, not pushed — what are the implications at scale?
 - When the trigger fires, what gets captured in the release? Is it clear which image version the release contains?
 - The channel + lifecycle combination — is it intuitive? How would you explain it to a new team member?
