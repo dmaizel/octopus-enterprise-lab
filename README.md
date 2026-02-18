@@ -490,6 +490,19 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443 &
 
 #### Step 2: Generate an ArgoCD API Token
 
+The `admin` account can't generate tokens by default — you need to enable the `apiKey` capability first:
+
+```bash
+# Patch the argocd-cm ConfigMap to allow token generation for admin
+kubectl -n argocd patch configmap argocd-cm --type merge -p '{"data":{"accounts.admin":"apiKey, login"}}'
+
+# Restart the server to pick up the change
+kubectl -n argocd rollout restart deployment argocd-server
+kubectl -n argocd wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server --timeout=120s
+```
+
+Now generate the token:
+
 ```bash
 brew install argocd  # if you don't have it already
 
