@@ -523,6 +523,8 @@ Create a `payments-api-argo` project in the Payments space. Instead of deploying
 
 #### Step 6: Test Drift Detection
 
+> ⚠️ **Namespace overlap:** If your Chapter 1 native Helm deployment of `payments-api` is still running in `payments-dev`, the ArgoCD Application now targets the same deployment. Either delete the Ch1 release first (`helm uninstall payments-api -n payments-dev --kube-context kind-finpay-dev`) or be aware that both Octopus and ArgoCD are now managing the same object — which is itself an interesting learning moment about ownership conflicts.
+
 Simulate someone making a manual change:
 
 ```bash

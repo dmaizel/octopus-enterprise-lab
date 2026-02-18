@@ -101,7 +101,7 @@ Create a `cluster-ops` project in the **Platform** space. Add a "Health Check" r
 echo "============================================"
 echo "  CLUSTER HEALTH CHECK"
 echo "  Environment: #{Octopus.Environment.Name}"
-echo "  Checked by:  #{Octopus.Deployment.CreatedBy.DisplayName}"
+echo "  Checked by:  #{Octopus.RunbookRun.CreatedBy.DisplayName}"
 echo "  Time:        $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "============================================"
 
@@ -278,7 +278,7 @@ echo "  DATABASE MIGRATION"
 echo "  Service:     payments-api"
 echo "  Environment: #{Octopus.Environment.Name}"
 echo "  Migration:   #{MigrationName}"
-echo "  Run by:      #{Octopus.Deployment.CreatedBy.DisplayName}"
+echo "  Run by:      #{Octopus.RunbookRun.CreatedBy.DisplayName}"
 echo "  Time:        $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "============================================"
 
