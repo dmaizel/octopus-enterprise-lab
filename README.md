@@ -217,11 +217,38 @@ kubectl --context kind-finpay-dev get pods -n payments-staging
 kubectl --context kind-finpay-prod get pods -n payments-prod
 ```
 
+### 📡 Live Object Status
+
+Before moving on — switch the project dashboard from deployment status to **live status** (there's a toggle). This uses a monitor component running inside the K8s Agent that continuously watches the objects Octopus deployed.
+
+Drill into the payments-api deployment in Development:
+- What objects does Octopus know about? (Deployment, Service, Pods, HPA, PDB...)
+- Check the **events** for a pod — compare with `kubectl describe pod`
+- Check the **logs** — compare with `kubectl logs`
+- Look at the **live manifest** — Octopus shows what's actually running in the cluster, not just what it applied
+
+Now simulate someone making a manual change:
+
+```bash
+kubectl --context kind-finpay-dev set image deployment/payments-api \
+  payments-api=nginx:1.24-alpine -n payments-dev
+```
+
+Check the live status again. What changed? Does Octopus detect the drift?
+
+Revert it:
+
+```bash
+kubectl --context kind-finpay-dev set image deployment/payments-api \
+  payments-api=nginx:1.25-alpine -n payments-dev
+```
+
 ### 📝 What to Notice
 
 - How many clicks from "code merged" to "running in staging"?
 - Can you see in the deployment log what Helm commands Octopus actually ran?
 - The release `v1.0.0` is an immutable snapshot that flows through environments — how does that compare to GitOps where each environment independently tracks Git?
+- Live Object Status uses the Argo GitOps Engine under the hood (the same engine ArgoCD uses) — but it's built into the K8s Agent, not a separate tool
 
 ---
 
@@ -292,6 +319,7 @@ Deploy through to Staging (approve the compliance sign-off).
 
 - Compare what's in Git (`replicas: #{Replicas}`) with what's running in the cluster (`kubectl get deployment kyc-service -n kyc-staging -o yaml | grep replicas`). What's in Git is NOT what's running.
 - Raw YAML required more Octopus variables than Helm did (Helm puts these in values files). What are the tradeoffs?
+- Check the **live status** for kyc-service — does it track raw YAML deployments the same way it tracked Helm deployments in Chapter 1?
 
 ---
 
@@ -417,7 +445,7 @@ kubectl --context kind-finpay-dev get pods -n payments-dev \
 
 Work through these using the Octopus UI. Document your findings in your Google Doc.
 
-1. **"Show me every production deployment in the last 30 days."** — Can you get a cross-space view?
+1. **"Show me every production deployment in the last 30 days."** — Can you get a cross-space view? Does the live status dashboard help here?
 2. **"Who approved each production deployment?"** — Where do you find the approver? Is it in the summary or buried in step details?
 3. **"What changed between the staging deploy and the production deploy of payments-api?"** — Can you diff what was applied?
 4. **"Show me that kyc-service cannot be deployed to production without approval."** — Is this enforced or just configured? Could an admin bypass it?
@@ -509,6 +537,7 @@ Watch ArgoCD revert it. This is the reconciliation loop that native Octopus does
 - Gateway (1 pod) vs Agent (3+ pods) — what's the tradeoff?
 - The model shift: Octopus commits to Git instead of running Helm directly. What does Octopus add on top of ArgoCD alone?
 - Could the Merchants space use the same Gateway and ArgoCD instance, or would they need their own?
+- Check the **live status** for `payments-api-argo` — does Octopus track the objects that ArgoCD deployed, or only objects it deployed directly? Compare this with the live status you saw for the native Helm `payments-api` project in Chapter 1. What are the visibility tradeoffs between the two paths?
 
 ---
 
