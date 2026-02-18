@@ -259,6 +259,24 @@ Create a second channel called "Hotfix" and assign it the Hotfix lifecycle. In t
 
 Go to **Infrastructure → Argo CD Instances → Add Argo CD Instance** in the Payments space.
 
+### ArgoCD Application Annotations
+
+Add these annotations to each Application in `argocd-manifests/applications.yaml`:
+
+```yaml
+# payments-api-dev
+annotations:
+  argo.octopus.com/project: payments-api-argo
+  argo.octopus.com/environment: development
+
+# payments-api-staging
+annotations:
+  argo.octopus.com/project: payments-api-argo
+  argo.octopus.com/environment: staging
+```
+
+These tell the ArgoCD Gateway which Octopus project and environment each Application corresponds to. Without them, Octopus has no way to map ArgoCD sync status back to its own deployment pipeline.
+
 ### ArgoCD Project Step
 
 The step type is called **"Update Argo CD Application Image Tags"**. It commits image tag changes to Git, which ArgoCD then detects and syncs to the cluster. The flow is: Octopus → Git commit → ArgoCD sync → cluster updated.
