@@ -52,6 +52,8 @@ FinPay Engineering
 
 **Time estimate:** 3-4 hours across sessions.
 
+> **💡 Stuck?** There's an [Answer Key](ANSWER_KEY.md) with step-by-step details for each section. Try to figure things out on your own first — the friction is where the learning happens. Use the answer key as a fallback, not a walkthrough.
+
 ---
 
 ## Setting the Stage
@@ -111,17 +113,9 @@ In **each of the 3 spaces**, create:
 
 ### Set Up External Feeds
 
-FinPay's CI pipeline pushes container images to Docker Hub (simulated). Set up a Docker Container Registry feed so Octopus can detect new images and trigger releases.
+FinPay's CI pipeline pushes container images to Docker Hub. Set up a Docker Container Registry feed in both the **Payments** and **Merchants** spaces so Octopus can detect new images and trigger releases.
 
-In the **Payments** space:
-
-**Library → External Feeds → Add Feed:**
-- Feed type: Docker Container Registry
-- Name: `Docker Hub`
-- URL: `https://registry-1.docker.io`
-- (No credentials needed for public images)
-
-Do the same in the **Merchants** space.
+You'll need to find where external feeds are configured and add Docker Hub as a container registry. No credentials are needed for public images at this stage.
 
 ### Set Up RBAC
 
@@ -136,11 +130,11 @@ FinPay has different access levels per team. In each space, configure teams and 
 
 Explore the built-in roles and figure out the right combination. Consider: what's the difference between a "Deployment Creator" and a "Project Deployer"? Where do you control "can run runbooks but can't deploy to production"?
 
+**Think about:** Alex can't deploy to production, but what if Alex's code is bundled in the same release as Marcus's? Does restricting Alex from deploying actually protect anything? Where should the safety net live — RBAC, PR approvals, or the CI/CD pipeline itself?
+
 ### Install K8s Agents
 
-Each space needs its own K8s Agent per cluster. Use the wizard at **Infrastructure → Deployment Targets → Add Deployment Target → Kubernetes Agent** — it walks you through everything and generates the Helm command to run.
-
-Install agents for:
+Each space needs its own K8s Agent per cluster. Find where deployment targets are managed and add a Kubernetes Agent for each combination below:
 
 | Space | Cluster Context | Agent Name | Target Tag | Environments |
 |-------|----------------|------------|------------|-------------|
@@ -178,10 +172,9 @@ Switch to the **Payments** space.
 
 **Key details:**
 - The chart is at `charts/payments-api/` in your repo
-- Each environment has its own values file (`values-development.yaml`, `values-staging.yaml`, `values-production.yaml`)
-- The `#{Octopus.Environment.Name | ToLower}` variable expression can dynamically pick the right values file
+- Each environment has its own values file (`values-development.yaml`, `values-staging.yaml`, `values-production.yaml`) — figure out how to dynamically pick the right one based on the environment
 - The namespace is different per environment — use a scoped project variable
-- Production deploys require a Manual Intervention step (scoped to the Production environment only) so the risk team can sign off
+- Production deploys require an approval gate so the risk team can sign off — how would you enforce this in the deployment process?
 - Use the "Standard" lifecycle
 - Target tag: `payments-k8s`
 
@@ -287,7 +280,7 @@ Still in the **Merchants** space.
 
 After deploying, check the project overview page for the tenant dashboard — the matrix of tenants × environments.
 
-**This project should be stored in Git (Config-as-Code):** When creating the project, choose to store it in a Git repository instead of Octopus. Point it to your finpay-deploy fork. Explore how the deployment process and settings are represented as `.ocl` files in the repo. Try creating a branch and modifying the process on that branch — this is how teams can test deployment process changes without affecting main.
+**This project should be stored in Git (Config-as-Code).** Octopus supports storing project configuration in a Git repo instead of the platform database. Figure out how to enable this when creating the project, point it to your finpay-deploy fork, and explore what ends up in the repo. Try making a change on a branch — what's the workflow for testing deployment process changes?
 
 ### 📝 What to Notice
 
@@ -325,11 +318,11 @@ Switch to the **Payments** space.
 
 **Goal:** Configure the `payments-api` project so Octopus detects new image tags pushed to your Docker Hub repo, auto-creates a release, and deploys to Development.
 
-**Key details:**
-- **Update the Docker Hub feed** with your Docker Hub credentials (Library → External Feeds → edit the feed you created earlier). Without credentials, Octopus can only see public images — it needs to query *your* repository
-- **Add a container image reference** to the Helm deploy step in the payments-api process. This tells Octopus to track `<your-username>/finpay-payments-api` from the Docker Hub feed. The referenced package version becomes available as an Octopus variable
-- **Override the Helm image values** — use the package version variable to set `image.tag`, and set `image.repository` to your Docker Hub image path. The chart already supports both via `image.repository` and `image.tag` in values. You can override with additional `--set` arguments or raw values YAML in the Helm step
-- **Create a trigger** (Project → Triggers) that watches for new container image versions and auto-creates a release
+**You need to solve four things:**
+1. The Docker Hub feed you set up earlier can only see public images — update it so Octopus can query *your* repository
+2. The payments-api deployment process needs to know which container image to track. Find how to add a package reference to the Helm step
+3. The Helm chart supports `image.repository` and `image.tag` — override these with the values from Octopus's package tracking
+4. Set up an automatic trigger so new image versions create releases without manual intervention
 
 ### Test It
 
@@ -348,7 +341,7 @@ kubectl --context kind-finpay-dev get pods -n payments-dev \
   -o jsonpath='{.items[*].spec.containers[*].image}' && echo
 ```
 
-**Also:** Explore **Channels**. Create a second channel called "Hotfix" that uses the Hotfix lifecycle (skips dev, goes straight to staging → prod). Think about how you'd route certain image tags (e.g., `*-hotfix`) to the Hotfix channel using version rules.
+**Also:** Explore **Channels**. Octopus can route releases through different lifecycles based on rules. Create a way for hotfix releases to skip dev and go straight to staging → prod. How would you automatically route image tags like `*-hotfix` to a different path?
 
 ### 📝 What to Notice
 
@@ -372,6 +365,7 @@ Work through these using the Octopus UI. Document your findings in your Google D
 3. **"What changed between the staging deploy and the production deploy of payments-api?"** — Can you diff what was applied?
 4. **"Show me that kyc-service cannot be deployed to production without approval."** — Is this enforced or just configured? Could an admin bypass it?
 5. **"Can a developer in the Payments team deploy to the Merchant team's production?"** — Test the RBAC you configured. Does space isolation prevent this? What about at the K8s level?
+   - **Bonus:** Think about whether per-person deploy restrictions (like Alex's) actually make sense when multiple developers' code ships in the same release. Is Octopus RBAC the right layer for this, or should it be handled by PR approvals and pipeline gates?
 6. **"Show me all operational actions (restarts, health checks) run against production."** — Is there a unified view across projects and spaces?
 
 ---
@@ -409,7 +403,7 @@ argocd account generate-token --account admin
 
 #### Step 3: Install the Octopus ArgoCD Gateway
 
-In the **Payments** space, go to **Infrastructure → Argo CD Instances → Add Argo CD Instance**. The wizard walks you through naming, environment selection, ArgoCD connection details, and generates a Helm command.
+In the **Payments** space, find where ArgoCD instances are managed and add one. The wizard walks you through naming, environment selection, ArgoCD connection details, and generates a Helm command.
 
 After installing, compare the footprint:
 
@@ -436,7 +430,7 @@ Look at the `argo.octopus.com/*` annotations in that file — they're the glue b
 
 #### Step 5: Create an Octopus Project (ArgoCD Mode)
 
-Create a `payments-api-argo` project in the Payments space. Add an "Update Argo CD Application Image Tags" step. Deploy and observe the flow: Octopus commits to Git → ArgoCD detects the change → syncs the cluster.
+Create a `payments-api-argo` project in the Payments space. Instead of deploying Helm directly, this project should update the ArgoCD application's image tags — find the right step type for this. Deploy and observe the flow: how does the change get from Octopus to the cluster?
 
 #### Step 6: Test Drift Detection
 
@@ -555,4 +549,3 @@ rm -rf ~/finpay-deploy
 
 ---
 
-*Last updated: February 2026*
