@@ -66,6 +66,20 @@ Add a **Manual Intervention** step to the deployment process and scope it to the
 
 ## Chapter 2: fraud-detector & Runbooks
 
+### fraud-detector Helm Step
+
+Same pattern as payments-api:
+
+| Setting | Value |
+|---------|-------|
+| Target tags | `payments-k8s` |
+| Chart source | Git Repository |
+| Chart path | `charts/fraud-detector` |
+| Values file 1 | `charts/fraud-detector/values.yaml` |
+| Values file 2 | `charts/fraud-detector/values-#{Octopus.Environment.Name \| ToLower}.yaml` |
+| Helm release name | `fraud-detector` |
+| Namespace | `#{Namespace}` |
+
 ### Restart Service Runbook
 
 Create a runbook on the fraud-detector project. Add a **Run a Script** step with target tag `payments-k8s`:
@@ -173,6 +187,24 @@ This produces `merchant-portal-acme-corp` and `merchant-portal-euroshop`.
 
 In **Settings → Multi-tenancy**, change to "Allow deployments with or without a tenant."
 
+### Injecting Tenant Variables into Helm
+
+The `BrandColor` and `DataRegion` variables are tenant-specific — they can't live in the static per-environment values files. Override them in the Helm step using raw values YAML or `--set` arguments:
+
+```
+image.repository=nginx
+image.tag=1.25-alpine
+env.BRAND_COLOR=#{BrandColor}
+env.DATA_REGION=#{DataRegion}
+```
+
+After deploying both tenants, verify the values are actually different:
+
+```bash
+kubectl --context kind-finpay-dev exec deploy/merchant-portal-acme-corp -n merchant-acme-dev -- env | grep -E "BRAND|REGION"
+kubectl --context kind-finpay-dev exec deploy/merchant-portal-euroshop -n merchant-euro-dev -- env | grep -E "BRAND|REGION"
+```
+
 ### Config-as-Code
 
 When creating the `merchant-portal` project, there's an option to store the project configuration in a Git repository instead of the Octopus database. Choose your finpay-deploy fork.
@@ -260,7 +292,7 @@ sleep 2
 echo "Migration complete."
 ```
 
-**Step 3 — Verification script:**
+**Step 3 — Run a Script** (verification, target tag: `payments-k8s`):
 
 ```bash
 echo "Verifying payments-api health post-migration..."
@@ -273,6 +305,43 @@ else
   echo "⚠️  payments-api returned HTTP ${STATUS} — investigate"
 fi
 ```
+
+---
+
+## Chapter 9: Git-Driven Variables
+
+### Enable Config-as-Code
+
+If you haven't already enabled Config-as-Code on the `fraud-detector` project, do that first: **Settings → Version Control → Configure** and point it to your finpay-deploy fork.
+
+### Move Variables to Git
+
+Once CaC is enabled, project variables are stored in `.ocl` files in the `.octopus/` directory of your repo. When you edit variables through the Octopus UI, it commits the change to Git.
+
+To move variables to Git:
+1. Enable CaC (if not already done)
+2. The existing variables will be exported to the `.ocl` files on the initial commit
+3. From this point, you can edit variables either via the UI (which commits to Git) or directly in the `.ocl` files (which Octopus reads on next operation)
+
+### What CAN'T Live in Git
+
+**Sensitive variables** (marked as sensitive in Octopus) cannot be stored in Git — they stay in the Octopus database. This is by design: you don't want secrets in your Git history. If `fraud-detector` had API keys or database passwords, those would remain platform-managed.
+
+**Library variable sets** also stay in the platform — they're shared across projects and aren't part of any single project's Git repository.
+
+### Test a Git-Driven Change
+
+1. Clone/pull your fork
+2. Find the `.octopus/fraud-detector/` directory
+3. Edit a variable value in the `.ocl` file (e.g., change a log level)
+4. Commit and push
+5. Create a new release in Octopus — it should pick up the changed variable value
+
+### Rollback
+
+If a variable change breaks something, you have two options:
+- **Git revert** — revert the commit and create a new release
+- **Octopus UI** — edit the variable in the UI (which creates a new Git commit)
 
 ---
 

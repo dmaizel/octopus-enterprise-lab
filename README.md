@@ -132,6 +132,22 @@ Explore the built-in roles and figure out the right combination. Consider: what'
 
 **Think about:** Alex can't deploy to production, but what if Alex's code is bundled in the same release as Marcus's? Does restricting Alex from deploying actually protect anything? Where should the safety net live — RBAC, PR approvals, or the CI/CD pipeline itself?
 
+### Verify RBAC (Recommended)
+
+Configuring roles is one thing — proving they work is another. Actually log in as the users you created and verify the permissions behave as expected.
+
+**The challenge:** Octopus Cloud uses Octopus ID (email-based auth), so each test user needs a real email address. The simplest approach is **Gmail aliases** — Gmail treats `yourname+anything@gmail.com` as the same inbox:
+
+1. Invite test users via **Configuration → Users → Invite User**:
+   - `yourname+sarah@gmail.com` (Sarah Chen — Platform Admin)
+   - `yourname+alex@gmail.com` (Alex Rivera — Junior Dev, Payments)
+2. Accept the invite emails from your inbox (they all arrive at your real address)
+3. Open an **incognito/private window** and log in as each user
+
+**What to test:**
+- As **Alex**: Can you deploy payments-api to Development? ✅ Can you deploy to Production? ❌ Can you run a runbook? ✅ Can you see the Merchants space? (Depends on your config)
+- As **Sarah**: Can you do everything across all spaces? ✅
+
 ### Install K8s Agents
 
 Each space needs its own K8s Agent per cluster. Find where deployment targets are managed and add a Kubernetes Agent for each combination below:
@@ -217,7 +233,15 @@ Junior developer Alex doesn't have `kubectl` access to the staging cluster — F
 
 ### What You'll Do
 
-**Part A:** Create and deploy the `fraud-detector` project in the Payments space. Same pattern as payments-api — Helm chart from your repo (`charts/fraud-detector/`), environment-scoped namespaces. Deploy through to Staging.
+**Part A:** Create and deploy the `fraud-detector` project in the Payments space. Same pattern as payments-api — Helm chart from your repo (`charts/fraud-detector/`), environment-scoped namespaces:
+
+| Variable | Value | Scope |
+|----------|-------|-------|
+| `Namespace` | `fraud-dev` | Development |
+| `Namespace` | `fraud-staging` | Staging |
+| `Namespace` | `fraud-prod` | Production |
+
+Deploy through to Staging.
 
 **Part B:** Create a "Restart Service" runbook on the fraud-detector project. The runbook should:
 - Run a `kubectl rollout restart` against the deployment in the appropriate namespace
@@ -308,6 +332,7 @@ Still in the **Merchants** space.
   | `BrandColor` | `#003399` | *(all)* |
   | `DataRegion` | `eu-west-1` | *(all)* |
 - The Helm release name must include the tenant name to avoid collisions
+- The tenant-specific values (brand color, data region) need to reach the running application — figure out how to pass Octopus variables as Helm value overrides
 - Deploy both tenants to Development
 
 After deploying, check the project overview page for the tenant dashboard — the matrix of tenants × environments.
@@ -429,6 +454,8 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443 &
 #### Step 2: Generate an ArgoCD API Token
 
 ```bash
+brew install argocd  # if you don't have it already
+
 argocd login localhost:8080 --insecure --username admin --password <password-from-above>
 argocd account generate-token --account admin
 ```
@@ -459,6 +486,8 @@ kubectl --context kind-finpay-dev apply -f argocd-manifests/applications.yaml
 ```
 
 Look at the `argo.octopus.com/*` annotations in that file — they're the glue between ArgoCD and Octopus.
+
+> The applications file only covers Development and Staging — both namespaces live on the dev cluster where ArgoCD is installed. In production, you'd run a separate ArgoCD instance on the prod cluster.
 
 #### Step 5: Create an Octopus Project (ArgoCD Mode)
 
@@ -564,6 +593,7 @@ Reflect on these — there are no right answers:
 - How would you onboard a new engineer to this setup?
 - If you were starting from scratch, would you choose the native Helm path or the ArgoCD path? For which use cases?
 - What would you want to build or change about this setup?
+- You set up 3 spaces manually — creating the same environments, lifecycles, credentials, and variable sets each time. How could you automate space bootstrapping? (Octopus has a [REST API](https://octopus.com/docs/octopus-rest-api) and a community [Terraform provider](https://registry.terraform.io/providers/OctopusDeployLabs/octopusdeploy/latest) — at what scale does automation become worth the investment?)
 
 ### Your Notes
 
