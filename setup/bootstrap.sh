@@ -4,9 +4,8 @@ set -euo pipefail
 # ============================================
 # FinPay Enterprise Lab — Bootstrap
 # ============================================
-# Creates Kind clusters, installs the NFS CSI driver
-# (required by Octopus K8s Agents), and creates all
-# namespaces used throughout the lab.
+# Creates Kind clusters and all namespaces used
+# throughout the lab.
 #
 # Run this AFTER forking and cloning finpay-deploy.
 # Usage: ./setup/bootstrap.sh
@@ -48,23 +47,7 @@ KINDCFG
 done
 
 # ============================================
-# 2. NFS CSI DRIVER
-# ============================================
-info "Installing NFS CSI driver (required by Octopus K8s Agent)..."
-
-for CTX in kind-finpay-dev kind-finpay-prod; do
-  info "  → ${CTX}"
-  helm upgrade --install --atomic \
-    --kube-context "${CTX}" \
-    --repo https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts \
-    --namespace kube-system \
-    --version "v4.*.*" \
-    csi-driver-nfs csi-driver-nfs 2>&1 | tail -1
-  ok "  NFS driver on ${CTX}"
-done
-
-# ============================================
-# 3. NAMESPACES
+# 2. NAMESPACES
 # ============================================
 info "Creating namespaces..."
 
