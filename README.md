@@ -109,7 +109,14 @@ In **each of the 3 spaces**, create:
   - "Standard" — Development (auto-deploy) → Staging (manual) → Production (manual)
   - "Hotfix" — Staging (manual) → Production (manual)
 - **Git Credentials** — so Octopus can pull from your finpay-deploy fork
-- **Library Variable Set "Common Config"** — shared values like registry URL and Kafka broker addresses (use environment scoping for values that differ between dev/staging/prod)
+- **Library Variable Set "Common Config"** — shared infrastructure values managed by the Platform team. You'll use this starting in Chapter 3 when services need config that's shared across projects (like message broker addresses). Create it with environment-scoped variables:
+
+  | Variable | Value | Scope |
+  |----------|-------|-------|
+  | `KafkaBrokers` | `kafka-dev.finpay.internal:9092` | Development |
+  | `KafkaBrokers` | `kafka-staging.finpay.internal:9092` | Staging |
+  | `KafkaBrokers` | `kafka-1.finpay.internal:9092,kafka-2.finpay.internal:9092` | Production |
+  | `RegistryUrl` | `registry.finpay.internal` | *(all)* |
 
 > You just set up the same environments, lifecycles, credentials, and variable sets **three times** — once per space.
 
@@ -202,8 +209,6 @@ Switch to the **Payments** space.
 - Production deploys require an approval gate so the risk team can sign off — how would you enforce this in the deployment process?
 - Use the "Standard" lifecycle
 - Target tag: `payments-k8s`
-
-**Also:** Include the "Common Config" library variable set in this project.
 
 Once the project is configured:
 
@@ -311,6 +316,7 @@ Switch to the **Merchants** space.
 | `Replicas` | `1` | `2` | `2` |
 | `LogLevel` | `debug` | `info` | `warn` |
 | `DocumentStorageUrl` | `s3://finpay-dev-kyc-docs` | `s3://finpay-staging-kyc-docs` | `s3://finpay-prod-kyc-docs` |
+- Include the "Common Config" library variable set — the YAML references `#{KafkaBrokers}`, which is shared infrastructure managed by Platform. Instead of duplicating it as a project variable, pull it from the library set. This is the difference from Helm (Chapter 1) where environment values files handled everything — raw YAML has no equivalent config layer, so library variable sets fill that gap.
 - Compliance requires a Manual Intervention step for Staging AND Production (not just prod)
 - Use the "Standard" lifecycle
 - Target tag: `merchants-k8s`

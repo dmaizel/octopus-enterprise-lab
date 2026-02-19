@@ -56,8 +56,6 @@ The key trick is `#{Octopus.Environment.Name | ToLower}` — this dynamically pi
 | `Namespace` | `payments-staging` | Staging |
 | `Namespace` | `payments-prod` | Production |
 
-Include the "Common Config" library variable set via **Variables → Library Sets**.
-
 ### Production Approval Gate
 
 Add a **Manual Intervention** step to the deployment process and scope it to the **Production** environment only (under Conditions → Environments). Place it BEFORE the Helm step. Dev and staging deploys skip it automatically.
@@ -142,6 +140,8 @@ Look at the YAML file — every `#{...}` placeholder needs a corresponding proje
 | `Replicas` | `1` | `2` | `2` |
 | `LogLevel` | `debug` | `info` | `warn` |
 | `DocumentStorageUrl` | `s3://finpay-dev-kyc-docs` | `s3://finpay-staging-kyc-docs` | `s3://finpay-prod-kyc-docs` |
+
+`KafkaBrokers` is NOT in this table — it comes from the **Common Config library variable set** (included via **Variables → Library Sets**). This is the whole point: shared infrastructure config lives in one place, not duplicated across every project.
 
 ### Compliance Gate
 
