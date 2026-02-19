@@ -291,7 +291,9 @@ The other options: "Generate version numbers using a template" (useful for date-
 
 ### Channels / Hotfix Path
 
-Create a second channel called "Hotfix" and assign it the Hotfix lifecycle. In the channel's version rules, add a rule that routes image tags matching `*-hotfix` to this channel. All other tags flow through the default channel.
+Create a second channel called "Hotfix" and assign it the Hotfix lifecycle. In the channel's version rules, add a package version rule for the `finpay-payments-api` package with pre-release tag regex `^hotfix`. This matches SemVer pre-release tags like `1.3.0-hotfix` — the regex runs against just the tag portion (`hotfix`), not the full version string.
+
+> ⚠️ **One trigger per channel.** Auto-release triggers are scoped to a single channel. You'll need a **separate trigger** for the Hotfix channel — the Default channel's trigger won't create releases for it.
 
 ---
 
