@@ -565,11 +565,16 @@ kubectl --context kind-finpay-dev apply -f argocd-manifests/applications.yaml
 
 #### Step 5: Create an Octopus Project (ArgoCD Mode)
 
+> ⚠️ **Before you start:** The ArgoCD Applications target the same namespaces (`payments-dev`, `payments-staging`) as your Chapter 1 native Helm `payments-api` project. To avoid ownership conflicts between Octopus's native Helm deployment and ArgoCD both managing the same objects, clean up first:
+>
+> 1. **Disable the auto-release trigger** on the original `payments-api` project (Deployments → Triggers → disable/delete). If you configured one in Chapter 5, both projects share the same Docker Hub feed and image — any new image tag would create releases in *both* projects.
+> 2. **Uninstall the Helm release:** `helm uninstall payments-api -n payments-dev --kube-context kind-finpay-dev`
+>
+> From this point, ArgoCD owns these namespaces.
+
 Create a `payments-api-argo` project in the Payments space. Instead of deploying Helm directly, this project should update the ArgoCD application's image tags — find the right step type for this. Deploy and observe the flow: how does the change get from Octopus to the cluster?
 
 #### Step 6: Test Drift Detection
-
-> ⚠️ **Namespace overlap:** If your Chapter 1 native Helm deployment of `payments-api` is still running in `payments-dev`, the ArgoCD Application now targets the same deployment. Either delete the Ch1 release first (`helm uninstall payments-api -n payments-dev --kube-context kind-finpay-dev`) or be aware that both Octopus and ArgoCD are now managing the same object — which is itself an interesting learning moment about ownership conflicts.
 
 Simulate someone making a manual change:
 
