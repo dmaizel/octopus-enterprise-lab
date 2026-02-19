@@ -231,14 +231,14 @@ In **Settings → Multi-tenancy**, change to "Allow deployments with or without 
 
 ### Injecting Tenant Variables into Helm
 
-The `BrandColor` and `DataRegion` variables are tenant-specific — they can't live in the static per-environment values files. Override them in the Helm step using raw values YAML or `--set` arguments:
+The `BrandColor` and `DataRegion` variables are tenant-specific — they can't live in the static per-environment values files. Add a **Key values** (or Inline YAML) template values source with these overrides:
 
 ```
-image.repository=nginx
-image.tag=1.25-alpine
 env.BRAND_COLOR=#{BrandColor}
 env.DATA_REGION=#{DataRegion}
 ```
+
+> ⚠️ **Template Values ordering matters.** The Octopus Helm step passes all template values sources as `-f` (values files) — there's no `--set`. Sources **higher in the list take higher precedence**. If your Key values entry is below the chart's values files, the chart defaults will override your values. Use the **Reorder** button to put your overrides **above** the chart's values files.
 
 After deploying both tenants, verify the values are actually different:
 
@@ -270,14 +270,14 @@ In the payments-api project's Helm deploy step, add a **container image package 
 
 ### 3. Override Helm Image Values
 
-Use the package version variable to override Helm values. You can do this with additional `--set` arguments in the Helm step:
+Add a **Key values** (or Inline YAML) template values source with:
 
 ```
 image.repository=<your-username>/finpay-payments-api
 image.tag=#{Octopus.Action.Package[finpay-payments-api].PackageVersion}
 ```
 
-Or use raw values YAML in the Helm step's values section.
+> ⚠️ **Ordering matters.** The Helm step has no `--set` — all template values sources are passed as `-f` (values files). Sources **higher in the list take higher precedence**. Reorder your image overrides **above** the chart's values files, or the chart defaults (`image.repository: nginx`) will win.
 
 ### 4. Create Auto-Release Trigger
 
