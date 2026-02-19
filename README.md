@@ -354,8 +354,14 @@ Still in the **Merchants** space.
 
 **Key details:**
 - Create two tenants: `Acme Corp` and `EuroShop`
-- Connect both tenants to the project and appropriate environments
-- Define tenant-scoped variables: each tenant gets its own namespace, brand color, and data region per environment:
+
+- **Set up tenant variable templates.** Octopus tenant variables work through *templates* — you define the shape, then each tenant fills in their own values. There are two kinds:
+  - **Project Templates** — variables specific to this project (e.g., `Namespace`)
+  - **Common Variable Templates** — tenant identity facts shared across projects, defined on a Library Variable Set (e.g., `BrandColor`, `DataRegion`)
+
+  Think about which variables belong where. Create a Library Variable Set for the common ones, and project templates for the rest. Then connect tenants to the project and environments, and fill in the values per tenant.
+
+- **Tenant-aware deployment targets.** K8s Agents default to excluding tenanted deployments — your tenanted project won't find them. Figure out how to make your Merchants agents available to tenanted deployments. Hint: tenant tags are cleaner than associating individual tenants.
 
   **Acme Corp:**
   | Variable | Value | Environment |
@@ -374,6 +380,7 @@ Still in the **Merchants** space.
   | `Namespace` | `merchant-euro-prod` | Production |
   | `BrandColor` | `#003399` | *(all)* |
   | `DataRegion` | `eu-west-1` | *(all)* |
+
 - The Helm release name must include the tenant name to avoid collisions
 - The tenant-specific values (brand color, data region) need to reach the running application — figure out how to pass Octopus variables as Helm value overrides
 - Deploy both tenants to Development

@@ -146,9 +146,56 @@ Manual Intervention step scoped to **Staging AND Production** (not just prod). P
 
 ## Chapter 4: Tenants & Config-as-Code
 
-### Tenant-Scoped Variables
+### Tenant Variable Templates
 
-Each tenant needs its own namespace, brand color, and data region — scoped by both tenant AND environment:
+Tenant variables in Octopus work through a **template** system: you define templates (the shape), then each tenant fills in their own values. There are two places to define templates:
+
+**1. Project Templates** (project-specific variables):
+
+Go to the merchant-portal project → **Tenant Variables** → **Project Templates** tab → **Add project template**:
+
+| Variable name | Label | Control type |
+|---------------|-------|-------------|
+| `Namespace` | Kubernetes Namespace | Single-line text box |
+
+This goes on the project because namespace naming is project-specific — `merchant-portal` uses `merchant-acme-dev`, but a different tenanted project would use its own convention.
+
+**2. Common Variable Templates** (shared tenant identity):
+
+Create a **Library Variable Set** called **"Tenant Config"** → go to the **Variable Templates** tab (not regular Variables) → Add Templates:
+
+| Variable name | Label | Control type |
+|---------------|-------|-------------|
+| `BrandColor` | Brand Color | Single-line text box |
+| `DataRegion` | Data Region | Single-line text box |
+
+These go on a Library Variable Set because they're tenant-level facts that any tenanted project would need. Include this library set on the merchant-portal project (Variables → Library Sets).
+
+### Tenant-Aware Deployment Targets
+
+K8s Agents default to **"Exclude from tenanted deployments"** — tenanted deployments won't find them. You need to change this AND associate tenants with the target. The cleanest approach uses tenant tags:
+
+1. **Create a Tag Set:** Library → Tenant Tag Sets → create `Hosting` (scope: Tenants) with a tag `Shared-K8s`
+2. **Tag both tenants:** Tenants → Acme Corp → add the `Hosting/Shared-K8s` tag. Repeat for EuroShop.
+3. **Update the K8s Agents:** Infrastructure → `merchants-dev` → Tenanted Deployments → set to **"Include in both tenanted and untenanted deployments"** → Associated Tenants → add the `Hosting/Shared-K8s` tenant tag. Repeat for `merchants-prod`.
+
+> Why tags instead of individual tenants? When EuroShop's competitor signs up next month, you just tag the new tenant — no target reconfiguration needed.
+
+### Enable Multi-Tenancy
+
+Go to the merchant-portal project → **Settings → Multi-tenancy** → set to **"Allow deployments with or without a tenant"**. Octopus can also auto-enable this when you connect a tenant, but setting it explicitly avoids confusion.
+
+### Connect Tenants to the Project
+
+Go to **Tenants → Acme Corp → Connected Projects** → add `merchant-portal` → select **all 3 environments** (Development, Staging, Production). Repeat for EuroShop.
+
+> The variable inputs only appear on the tenant's Variables page after the tenant is connected to environments.
+
+### Fill In Tenant Variable Values
+
+Go to the merchant-portal project → **Tenant Variables**. You'll see tabs for:
+- **Project Templates** — `Namespace` (edit inline per tenant/environment)
+- **Common Templates** — `BrandColor` and `DataRegion` from Tenant Config library set (edit inline per tenant)
 
 **Acme Corp:**
 | Variable | Value | Environment |
