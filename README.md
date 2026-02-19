@@ -553,6 +553,13 @@ The finpay-deploy repo includes `argocd-manifests/applications.yaml`. Before app
 1. Replace `<YOUR_USERNAME>` with your GitHub username
 2. The ArgoCD Gateway needs to know which ArgoCD Applications map to which Octopus projects and environments. How? Through annotations on the Application resources. Add the appropriate `argo.octopus.com/project` and `argo.octopus.com/environment` annotations to each Application in the file — these are the glue between ArgoCD and Octopus.
 
+3. If your fork is **private**, ArgoCD needs repo credentials. Add them before applying the Applications:
+
+```bash
+argocd repo add https://github.com/<YOUR_USERNAME>/finpay-deploy.git \
+  --username <github-username> --password <github-pat>
+```
+
 Then commit and apply:
 
 ```bash
@@ -560,6 +567,8 @@ cd ~/finpay-deploy
 git add -A && git commit -m "Configure ArgoCD applications with Octopus annotations" && git push
 kubectl --context kind-finpay-dev apply -f argocd-manifests/applications.yaml
 ```
+
+Verify the Applications synced successfully (`argocd app list`). If they show `ComparisonError` with "authentication required" or "repository not found", the repo credentials are missing or incorrect — add/fix them and delete + re-apply the Applications.
 
 > The applications file only covers Development and Staging — both namespaces live on the dev cluster where ArgoCD is installed. In production, you'd run a separate ArgoCD instance on the prod cluster.
 

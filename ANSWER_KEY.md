@@ -321,6 +321,17 @@ annotations:
 
 These tell the ArgoCD Gateway which Octopus project and environment each Application corresponds to. Without them, Octopus has no way to map ArgoCD sync status back to its own deployment pipeline.
 
+### Private Repos — ArgoCD Credentials
+
+If your fork is private, ArgoCD can't clone it by default. You'll see `ComparisonError: authentication required` on the Applications. Fix: add repo credentials to ArgoCD, then delete and re-apply the Applications (ArgoCD caches the failed state).
+
+```bash
+argocd repo add https://github.com/<YOUR_USERNAME>/finpay-deploy.git \
+  --username <github-username> --password <github-pat>
+kubectl --context kind-finpay-dev delete -f argocd-manifests/applications.yaml
+kubectl --context kind-finpay-dev apply -f argocd-manifests/applications.yaml
+```
+
 ### ArgoCD Project Step
 
 The step type is called **"Update Argo CD Application Image Tags"**. It commits image tag changes to Git, which ArgoCD then detects and syncs to the cluster. The flow is: Octopus → Git commit → ArgoCD sync → cluster updated.
