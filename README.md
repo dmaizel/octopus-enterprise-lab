@@ -283,15 +283,21 @@ Deploy through to Staging.
 - Use `#{Namespace}` variable so it works for any environment
 - Be runnable by Alex (junior dev) — verify the RBAC you set up allows this
 
-**Part C:** Switch to the Platform space. Create a `cluster-ops` project with a "Health Check" runbook. This should report node status, unhealthy pods, and recent warning events. It runs against the Platform agent.
+**Part C:** Switch to the Platform space. Create a `cluster-ops` project with a "Provision Namespace" runbook. In Octopus, runbooks live on projects — so `cluster-ops` is a home for cross-cutting operational tasks that aren't tied to any specific service. It won't have a deployment process.
 
-Run the restart runbook as "Alex" against Staging. Run the health check from the Platform space.
+The runbook should:
+- Accept **prompted variables** at runtime: namespace name and team label (e.g. `payments`, `merchants`)
+- Create the namespace with standard labels (`team`, `managed-by`)
+- Run against the Platform agent (`platform-k8s`)
+
+Run the restart runbook as "Alex" against Staging. Run the namespace provisioning runbook from the Platform space to create a test namespace.
 
 ### 📝 What to Notice
 
 - The restart runbook asks you to pick an environment. Does this make sense for all runbook types?
 - Alex never got `kubectl` access, but could restart the service. Where is this recorded?
-- The Platform space health check runs on a different agent that happens to be on the same cluster as the Payments agent. They're completely independent in Octopus.
+- The Platform space `cluster-ops` project has no deployment process — it exists purely to hold runbooks. This is how you model cross-cutting operations in Octopus.
+- The namespace provisioning runbook runs on a Platform agent that happens to share the same cluster as the Payments agent. They're completely independent in Octopus — different spaces, different agents, different permissions.
 
 ---
 

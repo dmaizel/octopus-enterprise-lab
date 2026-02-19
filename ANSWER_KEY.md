@@ -91,35 +91,30 @@ echo "Pod status after restart:"
 kubectl get pods -n #{Namespace} -l app=fraud-detector
 ```
 
-### Cluster Health Check Runbook
+### Provision Namespace Runbook
 
-Create a `cluster-ops` project in the **Platform** space. Add a "Health Check" runbook with a **Run a Script** step, target tag `platform-k8s`:
+Create a `cluster-ops` project in the **Platform** space (no deployment process needed). Add a "Provision Namespace" runbook.
+
+**Prompted Variables** — go to the project's **Variables → Project Variables** and create these with **"Prompt for value"** checked:
+
+| Variable | Label | Type |
+|----------|-------|------|
+| `NamespaceName` | Namespace Name | Single-line text |
+| `TeamLabel` | Team Label | Single-line text |
+
+Add a **Run a Script** step with target tag `platform-k8s`:
 
 ```bash
-echo "============================================"
-echo "  CLUSTER HEALTH CHECK"
-echo "  Environment: #{Octopus.Environment.Name}"
-echo "  Checked by:  #{Octopus.RunbookRun.CreatedBy.DisplayName}"
-echo "  Time:        $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-echo "============================================"
+echo "Provisioning namespace #{NamespaceName} for team #{TeamLabel}..."
 
-echo ""
-echo "--- Nodes ---"
-kubectl get nodes -o wide
+kubectl create namespace #{NamespaceName} --dry-run=client -o yaml | \
+  kubectl label --local -f - \
+    team=#{TeamLabel} \
+    managed-by=octopus \
+    -o yaml | kubectl apply -f -
 
-echo ""
-echo "--- Pods Not Running ---"
-NOT_RUNNING=$(kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded --no-headers 2>/dev/null | wc -l)
-if [ "$NOT_RUNNING" -gt 0 ]; then
-  echo "⚠️  ${NOT_RUNNING} pods in bad state:"
-  kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
-else
-  echo "✅ All pods healthy"
-fi
-
-echo ""
-echo "--- Recent Warnings ---"
-kubectl get events -A --field-selector type=Warning --sort-by='.lastTimestamp' 2>/dev/null | tail -10 || echo "No recent warnings"
+echo "✅ Namespace #{NamespaceName} is ready."
+kubectl get namespace #{NamespaceName} --show-labels
 ```
 
 ---
@@ -302,7 +297,7 @@ echo "  DATABASE MIGRATION"
 echo "  Service:     payments-api"
 echo "  Environment: #{Octopus.Environment.Name}"
 echo "  Migration:   #{MigrationName}"
-echo "  Run by:      #{Octopus.RunbookRun.CreatedBy.DisplayName}"
+echo "  Run:         #{Octopus.RunbookRun.Name}"
 echo "  Time:        $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "============================================"
 
