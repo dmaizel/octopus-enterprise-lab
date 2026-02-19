@@ -197,7 +197,7 @@ Switch to the **Payments** space.
 
 **Key details:**
 - The chart is at `charts/payments-api/` in your repo
-- Each environment has its own values file (`values-development.yaml`, `values-staging.yaml`, `values-production.yaml`) — figure out how to dynamically pick the right one based on the environment
+- The chart has a base `values.yaml` plus per-environment overrides (`values-development.yaml`, `values-staging.yaml`, `values-production.yaml`) — you need both the base and the right override. Figure out how to dynamically pick the environment-specific file
 - The namespace is different per environment — use a scoped project variable:
 
 | Variable | Value | Scope |
