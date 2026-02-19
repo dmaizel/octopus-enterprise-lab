@@ -98,6 +98,8 @@ Log into your Octopus Cloud instance.
 2. Create `Payments`
 3. Create `Merchants`
 
+> When creating a space, Octopus asks you to select **Space Managers**. Just add yourself (or the "Octopus Administrators" team) for now — we'll set up proper RBAC later.
+
 ### Bootstrap Each Space
 
 In **each of the 3 spaces**, create:
