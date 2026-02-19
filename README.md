@@ -206,6 +206,7 @@ Switch to the **Payments** space.
 | `Namespace` | `payments-staging` | Staging |
 | `Namespace` | `payments-prod` | Production |
 
+- Set the **Helm release name** to `payments-api` — if you skip this, Octopus defaults to the step name and you'll end up with a deployment called something like `deployahelmchart-development`
 - Production deploys require an approval gate so the risk team can sign off — how would you enforce this in the deployment process?
 - Use the "Standard" lifecycle
 - Target tag: `payments-k8s`
