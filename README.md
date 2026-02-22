@@ -133,7 +133,6 @@ FinPay has different access levels per team. In each space, configure teams and 
 **Configuration → Teams** — Create teams and assign users with appropriate roles:
 
 - Sarah's Platform team needs admin access across all spaces
-- Marcus's developers can deploy to Dev and Staging in Payments, but Production requires a specific role
 - Alex (junior dev) should be able to trigger deployments to Dev/Staging and run runbooks, but not deploy to Production or modify project configuration
 - Priya's team should have full control of the Merchants space but only read access to Payments
 
